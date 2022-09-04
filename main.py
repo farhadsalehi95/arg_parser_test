@@ -49,9 +49,11 @@ def getArgs():
     parser.add_argument('-t' , '--table' , dest = 'table' , action="store_true" , help='which server you want to run dump')
     parser.add_argument('-f' , '--full' , dest = 'full' , action="store_true" , help='full dump from database base on your choose dev/prod')
     parser.add_argument('-e' , '--env' , dest = 'env' , action="store_true" , help='show env base on your choose dev/prod')
-    return parser.parse_args()
+    parser.add_argument('-g' , '--gr' , dest="gulp" , action='store_true' , help='run gulp run base on your choose dev/prod')
+    return parser
 
-args = getArgs()
+args = getArgs().parse_args()
+
 prod_base_path = "/var/www/homsa/"
 dev_base_path = "/var/www/homsa-new/homsa/"
 dev_base_user = "root"
@@ -59,17 +61,20 @@ prod_base_user = "webapp"
 
 
 def create_connection(mode):
+    parser = getArgs()
     if mode == "dev":
-        print(mode)
         ssh = paramiko.SSHClient()
         private_key = paramiko.RSAKey.from_private_key_file("/home/f.salehi/.ssh/id_rsa")
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(hostname="homsa-dev" , username="root" , pkey=private_key)
-    else:
+    elif mode == "prod":
         ssh = paramiko.SSHClient()
         private_key = paramiko.RSAKey.from_private_key_file("/home/f.salehi/.ssh/id_rsa")
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(hostname="homsa-pr" , username="root" , pkey=private_key)
+    else:
+        parser.print_help()
+        sys.exit()
     return ssh
 # ssh_stdin , ssh_stdout , ssh_stderr = (ssh.exec_command(f"php {dev_base_path}artisan o:c"))
 # print(ssh_stdout.read().decode())
@@ -82,21 +87,24 @@ def create_connection(mode):
 #
 #     print("mamad")
 
-def run_command(mode , oc , rr):
+def run_php_command(mode , oc , rr):
+    parser = getArgs()
     ssh = create_connection(mode)
     if mode == "dev":
-        if oc:
+        if oc and not rr:
             _, ssh_stdout, ssh_stderr = (ssh.exec_command(f"php {dev_base_path}artisan o:c"))
             if ssh_stdout:
                 print(ssh_stdout.read().decode())
             else:
                 print(ssh_stderr.read().decode())
-        if rr:
+        if rr and not oc:
             _, ssh_stdout, ssh_stderr = (ssh.exec_command(f"php {dev_base_path}artisan rooms:reindex"))
             if ssh_stdout:
                 print(ssh_stdout.read().decode())
             else:
                 print(ssh_stderr.read().decode())
+        if rr and oc:
+            sys.exit("Please run one by one command")
 
     elif mode == "prod":
         if oc:
@@ -112,7 +120,8 @@ def run_command(mode , oc , rr):
             else:
                 print(ssh_stderr.read().decode())
     else:
-        sys.exit("please run wiht -h flag and read help")
+        parser.print_help()
+        sys.exit()
         # sys.exit("0")
         # _, ssh_stdout, ssh_stderr = (ssh.exec_command(f"php {prod_base_path}artisan o:c"))
         # if ssh_stdout:
@@ -120,7 +129,30 @@ def run_command(mode , oc , rr):
         # else:
         #     print(ssh_stderr.read().decode())
 
-run_command(args.mode , args.optimize_clear , args.rooms_reindex)
+def run_supervisor_command(mode , sra):
+    parser = getArgs()
+    ssh = create_connection(mode)
+    if mode == "dev":
+        if sra:
+            _, ssh_stdout, ssh_stderr = (ssh.exec_command("supervisorctl restart all"))
+            if ssh_stdout:
+                print(ssh_stdout.read().decode())
+            else:
+                print(ssh_stderr.read().decode())
+    elif mode == "prod":
+        if sra:
+            _, ssh_stdout, ssh_stderr = (ssh.exec_command("supervisorctl restart all"))
+            if ssh_stdout:
+                print(ssh_stdout.read().decode())
+            else:
+                print(ssh_stderr.read().decode())
+    else:
+        parser.print_help()
+        sys.exit()
+
+run_supervisor_command(args.mode , args.supervisor_restart)
+run_php_command(args.mode , args.optimize_clear , args.rooms_reindex)
+
 
 
 # def execute_command(args):
