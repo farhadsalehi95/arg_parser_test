@@ -45,6 +45,7 @@ def getArgs():
     parser.add_argument('-o' , '--oc' , dest = 'optimize_clear' , action="store_true",  help="php artisan optimize:clear")
     parser.add_argument('-r' , '--rr' , dest = 'rooms_reindex' , action="store_true" , help='php artisan rooms:reindex')
     parser.add_argument('-s' , '--sra' , dest = 'supervisor_restart' , action="store_true" , help='supervisorctl restart all')
+    parser.add_argument('-ss', '--ssa', dest='supervisor_status', action="store_true", help='supervisorctl status all')
     parser.add_argument('-m' , '--mode' , dest = 'mode' , nargs="?" , required=True, choices = ["dev","prod"], help="choose which server you want to run command")
     parser.add_argument('-t' , '--table' , dest = 'table' , action="store_true" , help='which server you want to run dump')
     parser.add_argument('-f' , '--full' , dest = 'full' , action="store_true" , help='full dump from database base on your choose dev/prod')
@@ -107,18 +108,20 @@ def run_php_command(mode , oc , rr):
             sys.exit("Please run one by one command")
 
     elif mode == "prod":
-        if oc:
+        if oc and not rr:
             _, ssh_stdout, ssh_stderr = (ssh.exec_command(f"php {prod_base_path}artisan o:c"))
             if ssh_stdout:
                 print(ssh_stdout.read().decode())
             else:
                 print(ssh_stderr.read().decode())
-        if rr:
+        if rr and not oc:
             _, ssh_stdout, ssh_stderr = (ssh.exec_command(f"php {prod_base_path}artisan rooms:reindex"))
             if ssh_stdout:
                 print(ssh_stdout.read().decode())
             else:
                 print(ssh_stderr.read().decode())
+        if rr and oc:
+            sys.exit("Please run one by one command")
     else:
         parser.print_help()
         sys.exit()
@@ -129,28 +132,34 @@ def run_php_command(mode , oc , rr):
         # else:
         #     print(ssh_stderr.read().decode())
 
-def run_supervisor_command(mode , sra):
+def run_supervisor_command(mode , sra , ssa):
     parser = getArgs()
     ssh = create_connection(mode)
     if mode == "dev":
-        if sra:
+        if sra and not ssa:
             _, ssh_stdout, ssh_stderr = (ssh.exec_command("supervisorctl restart all"))
             if ssh_stdout:
                 print(ssh_stdout.read().decode())
             else:
                 print(ssh_stderr.read().decode())
+        if sra and ssa:
+            sys.exit("Please run one by one command")
     elif mode == "prod":
-        if sra:
+        if sra and not ssa:
             _, ssh_stdout, ssh_stderr = (ssh.exec_command("supervisorctl restart all"))
             if ssh_stdout:
                 print(ssh_stdout.read().decode())
             else:
                 print(ssh_stderr.read().decode())
+        if sra and ssa:
+            sys.exit("Please run one by one command")
     else:
         parser.print_help()
         sys.exit()
 
-run_supervisor_command(args.mode , args.supervisor_restart)
+
+
+run_supervisor_command(args.mode , args.supervisor_restart , args.supervisor_status)
 run_php_command(args.mode , args.optimize_clear , args.rooms_reindex)
 
 
