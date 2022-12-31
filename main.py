@@ -28,7 +28,7 @@
 #                             help='add destination port you want allow on ufw like this 3306 3389 22')
 #         return parser.parse_args()
 #
-# # ssh -N -L 0.0.0.0:3306:192.168.43.6:3306 root@homsa-db-pr
+# # ssh -N -L 0.0.0.0:3306:192.168.43.6:3306 root@server-db-pr
 # a = datetime.datetime.now()
 # print(int(a.timestamp()))
 #
@@ -55,24 +55,24 @@ def getArgs():
 
 args = getArgs().parse_args()
 
-prod_base_path = "/var/www/homsa/"
-dev_base_path = "/var/www/homsa-new/homsa/"
+prod_base_path = "/var/www/project"
+dev_base_path = "/var/www/project/"
 dev_base_user = "root"
-prod_base_user = "webapp"
+prod_base_user = ""
 
 
 def create_connection(mode):
     parser = getArgs()
     if mode == "dev":
         ssh = paramiko.SSHClient()
-        private_key = paramiko.RSAKey.from_private_key_file("/home/f.salehi/.ssh/id_rsa")
+        private_key = paramiko.RSAKey.from_private_key_file("/home/user/.ssh/id_rsa")
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname="homsa-dev" , username="root" , pkey=private_key)
+        ssh.connect(hostname="server-dev" , username="root" , pkey=private_key)
     elif mode == "prod":
         ssh = paramiko.SSHClient()
-        private_key = paramiko.RSAKey.from_private_key_file("/home/f.salehi/.ssh/id_rsa")
+        private_key = paramiko.RSAKey.from_private_key_file("/home/user/.ssh/id_rsa")
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(hostname="homsa-pr" , username="root" , pkey=private_key)
+        ssh.connect(hostname="server-pr" , username="root" , pkey=private_key)
     else:
         parser.print_help()
         sys.exit()
